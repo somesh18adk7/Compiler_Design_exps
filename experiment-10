@@ -1,0 +1,49 @@
+backend.l
+%{
+#include &quot;backend.tab.h&quot;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+%}
+%%
+[a-zA-Z][a-zA-Z0-9]* { yylval.str = strdup(yytext); return ID; }
+&quot;=&quot; { return &#39;=&#39;; }
+&quot;+&quot; { return &#39;+&#39;; }
+&quot;-&quot; { return &#39;-&#39;; }
+&quot;*&quot; { return &#39;*&#39;; }
+&quot;/&quot; { return &#39;/&#39;; }
+&quot;;&quot; { return &#39;;&#39;; }
+[ \t\n] { /* skip whitespace */ }
+%%
+int yywrap() { return 1; }
+backend.y
+%{
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+%}
+%union { char *str; }
+%token &lt;str&gt; ID
+%type &lt;str&gt; expr
+%left &#39;+&#39; &#39;-&#39;
+%left &#39;*&#39; &#39;/&#39;
+
+%%
+stmt_list: stmt_list stmt | stmt ;
+stmt: ID &#39;=&#39; expr &#39;;&#39; { printf(&quot;MOV %s, AX\n\n&quot;, $1); } ;
+expr:
+ID { printf(&quot;MOV AX, %s\n&quot;, $1); $$ = $1; }
+| expr &#39;+&#39; ID { printf(&quot;ADD AX, %s\n&quot;, $3); $$ = $3; }
+| expr &#39;-&#39; ID { printf(&quot;SUB AX, %s\n&quot;, $3); $$ = $3; }
+| expr &#39;*&#39; ID { printf(&quot;MUL %s\n&quot;, $3); $$ = $3; }
+| expr &#39;/&#39; ID { printf(&quot;MOV DX, 0\nMOV BX, %s\nDIV BX\n&quot;, $3); $$ = $3; }
+;
+%%
+int main() {
+printf(&quot;Enter TAC statements (end with Ctrl+D):\n&quot;);
+yyparse();
+return 0;
+}
+int yyerror(char *s) {
+printf(&quot;Syntax Error: %s\n&quot;, s);
+return 0;
+}
